@@ -1,5 +1,5 @@
 import json
-from typing import Iterable, Optional, cast
+from typing import Any, Iterable, Optional, cast
 from pydantic import BaseModel
 
 import httpx2
@@ -12,7 +12,7 @@ from base_llm import BaseLLM
 from messages import Message, StructuredT, ToolCall, Roles
 
 
-class LLMOpenai(BaseLLM):
+class LLMOpenai(BaseLLM, provider="openai"):
     def __init__(
         self,
         model: str,
@@ -36,6 +36,7 @@ class LLMOpenai(BaseLLM):
         self,
         *,
         messages: list[dict],
+        *,
         temperature: Optional[float] | Omit = omit,
         tool_choice: str | Omit = omit,
         tools: list[dict] | Omit = omit,
