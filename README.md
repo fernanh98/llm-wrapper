@@ -23,6 +23,7 @@ that lets you act as the LLM while developing.
 ```text
 llm-wrapper/
 ├── README.md
+├── pyproject.toml
 ├── requirements.txt
 ├── notebook/            # Jupyter playground driven by .env
 │   ├── llm_playground.ipynb
@@ -35,6 +36,52 @@ llm-wrapper/
         ├── base_llm.py        # Abstract interface + provider registry/factory
         ├── implementations.py # Built-in providers (OpenAI, manual) + create_llm()
         └── messages.py        # Message, Roles and ToolCall models
+```
+
+## Installation
+
+`llm-wrapper` is a Python package, so you can install it into any project with
+`pip` directly from the repository:
+
+```bash
+pip install "llm-wrapper @ git+https://github.com/fernanh98/llm-wrapper.git"
+```
+
+To pin a specific commit, tag, or branch for reproducible installs:
+
+```bash
+pip install "llm-wrapper @ git+https://github.com/fernanh98/llm-wrapper.git@<tag-or-commit>"
+```
+
+If you are working on the package itself, clone it and install it in editable
+mode so your changes take effect without reinstalling:
+
+```bash
+git clone https://github.com/fernanh98/llm-wrapper.git
+cd llm-wrapper
+pip install -e .
+```
+
+You can also add it as a dependency of another project. In `requirements.txt`:
+
+```text
+llm-wrapper @ git+https://github.com/fernanh98/llm-wrapper.git
+```
+
+Or in `pyproject.toml`:
+
+```toml
+[project]
+dependencies = [
+    "llm-wrapper @ git+https://github.com/fernanh98/llm-wrapper.git",
+]
+```
+
+After installing, import the package from anywhere without setting
+`PYTHONPATH`:
+
+```python
+from llm_wrapper import create_llm
 ```
 
 ## Requirements
@@ -59,8 +106,9 @@ import llm_wrapper.implementations
 from llm_wrapper.base_llm import BaseLLM
 ```
 
-If your script runs from another directory, add the repository root to the
-import path:
+Once the package is installed (see [Installation](#installation)), those
+imports work from any directory. If the package is not installed and your
+script runs from another directory, add the repository root to the import path:
 
 ```bash
 PYTHONPATH=/path/to/llm-wrapper python your_script.py
