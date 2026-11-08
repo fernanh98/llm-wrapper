@@ -34,7 +34,6 @@ class LLMOpenai(BaseLLM, provider="openai"):
 
     def chat(
         self,
-        *,
         messages: list[dict],
         *,
         temperature: Optional[float] | Omit = omit,
@@ -96,3 +95,58 @@ class LLMOpenai(BaseLLM, provider="openai"):
             for call in (tool_calls or [])
             if call.type == "function"
         ]
+
+
+class LLMManual(BaseLLM, provider="manual"):
+    """Interactive implementation that plays the LLM role instead of calling one.
+
+    It prints the exact messages that would be sent to the provider, then uses
+    the text typed by the developer as the assistant response.
+    """
+
+    def __init__(
+        self,
+        model: str = "manual",
+        api_key: str = "none",
+    ):
+        super().__init__(model=model, api_key=api_key)
+
+    def chat(
+        self,
+        messages: list[dict],
+        *args,
+        **kwargs,
+    ) -> Message:
+        self._print_messages(messages)
+
+        response_format = kwargs.get("response_format")
+        if isinstance(response_format, type) and issubclass(response_format, BaseModel):
+            content = input("Assistant response (JSON matching the schema): ")
+            return Message(
+                role=Roles.LLM,
+                content=content,
+                structured_content=response_format.model_validate_json(content),
+            )
+
+        content = input("Assistant response: ")
+        return Message(role=Roles.LLM, content=content)
+
+    @staticmethod
+    def _print_messages(messages: list[dict]) -> None:
+        print("\n" + "=" * 80)
+        print("LLMManual: messages the LLM would see")
+        print("=" * 80)
+        for index, message in enumerate(messages):
+            print(f"\n--- message {index} ---")
+            print(json.dumps(message, indent=2, ensure_ascii=False, default=str))
+        print("=" * 80)
+
+
+def create_llm(provider: str, **kwargs: Any) -> BaseLLM:
+    """Create a registered LLM implementation by provider name.
+
+    Scripts can keep importing this single function while the concrete
+    implementation (and its constructor arguments) changes.
+    """
+    return BaseLLM.create(provider, **kwargs)
+
