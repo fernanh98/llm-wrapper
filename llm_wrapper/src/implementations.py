@@ -8,8 +8,8 @@ from openai._types import Omit, omit, NotGiven, not_given
 from openai.types.chat import ChatCompletionMessageToolCallUnion
 from openai.types.chat.completion_create_params import ResponseFormat
 
-from base_llm import BaseLLM
-from messages import Message, StructuredT, ToolCall, Roles
+from .base_llm import BaseLLM
+from .messages import Message, StructuredT, ToolCall, Roles
 
 
 class LLMOpenai(BaseLLM, provider="openai"):
@@ -17,7 +17,7 @@ class LLMOpenai(BaseLLM, provider="openai"):
         self,
         model: str,
         base_url: str,
-        api_key: str = "none"
+        api_key: str
     ):
         super().__init__(
             model=model,

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, ClassVar, Mapping
 
-from messages import Message
+from .messages import Message
 
 
 class BaseLLM(ABC):
