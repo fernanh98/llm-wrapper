@@ -24,11 +24,17 @@ that lets you act as the LLM while developing.
 llm-wrapper/
 ├── README.md
 ├── requirements.txt
-└── src/
+├── notebook/            # Jupyter playground driven by .env
+│   ├── llm_playground.ipynb
+│   ├── README.md
+│   ├── .env.example
+│   └── requirements.txt
+└── llm_wrapper/
     ├── __init__.py
-    ├── base_llm.py        # Abstract interface + provider registry/factory
-    ├── implementations.py # Built-in providers (OpenAI, manual) + create_llm()
-    └── messages.py        # Message, Roles and ToolCall models
+    └── src/
+        ├── base_llm.py        # Abstract interface + provider registry/factory
+        ├── implementations.py # Built-in providers (OpenAI, manual) + create_llm()
+        └── messages.py        # Message, Roles and ToolCall models
 ```
 
 ## Requirements
@@ -42,32 +48,28 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Important: import path
+## Import path
 
-The modules inside `src/` use flat imports such as:
+The implementation modules live in `llm_wrapper/src/`, but the package exposes
+them at its root, so no path configuration is needed when running from the
+repository root:
 
 ```python
-from messages import Message
+import llm_wrapper.implementations
+from llm_wrapper.base_llm import BaseLLM
 ```
 
-Therefore `src/` must be on `PYTHONPATH` (or your script must live inside
-`src/`). From the repository root:
+If your script runs from another directory, add the repository root to the
+import path:
 
 ```bash
-PYTHONPATH=src python your_script.py
-```
-
-Alternatively, export it for the current shell:
-
-```bash
-export PYTHONPATH="$PWD/src"
-python your_script.py
+PYTHONPATH=/path/to/llm-wrapper python your_script.py
 ```
 
 ## Quick start
 
 ```python
-from implementations import create_llm
+from llm_wrapper.implementations import create_llm
 
 llm = create_llm(
     "openai",
@@ -98,6 +100,21 @@ llm = create_llm(
 )
 ```
 
+## Notebook playground
+
+`notebook/llm_playground.ipynb` exercises every registered provider — plain
+chat, structured output, tool calls, the interactive `manual` provider, and
+`from_config()` — and reads its configuration from `notebook/.env`.
+
+```bash
+pip install -r notebook/requirements.txt
+cp notebook/.env.example notebook/.env   # then add your keys
+jupyter lab notebook/llm_playground.ipynb
+```
+
+See [notebook/README.md](notebook/README.md) for the available environment
+variables and safety notes.
+
 ## Creating implementations
 
 All concrete implementations subclass `BaseLLM` and register themselves with a
@@ -117,7 +134,7 @@ The registry can be used in several ways.
 ### By provider name with `create_llm`
 
 ```python
-from implementations import create_llm
+from llm_wrapper.implementations import create_llm
 
 llm = create_llm(
     "openai",
@@ -133,8 +150,8 @@ you switch providers.
 ### Directly through `BaseLLM`
 
 ```python
-from base_llm import BaseLLM
-import implementations  # Required to register the built-in providers
+from llm_wrapper.base_llm import BaseLLM
+import llm_wrapper.implementations  # Registers the built-in providers
 
 llm = BaseLLM.create(
     "openai",
@@ -150,8 +167,8 @@ llm = BaseLLM.create(
 selects the implementation; every other key is forwarded to its constructor.
 
 ```python
-from base_llm import BaseLLM
-import implementations  # Required to register the built-in providers
+from llm_wrapper.base_llm import BaseLLM
+import llm_wrapper.implementations  # Registers the built-in providers
 
 config = {
     "provider": "openai",
@@ -168,8 +185,8 @@ code:
 
 ```python
 import json
-from base_llm import BaseLLM
-import implementations
+from llm_wrapper.base_llm import BaseLLM
+import llm_wrapper.implementations
 
 with open("llm_config.json", encoding="utf-8") as config_file:
     llm = BaseLLM.from_config(json.load(config_file))
@@ -189,8 +206,8 @@ Example `llm_config.json`:
 ### Discover available providers
 
 ```python
-from base_llm import BaseLLM
-import implementations
+from llm_wrapper.base_llm import BaseLLM
+import llm_wrapper.implementations
 
 print(BaseLLM.available_providers())
 # ('manual', 'openai')
@@ -241,7 +258,7 @@ API. Instead, it prints the messages that would be sent to the LLM and asks you
 to type the assistant response.
 
 ```python
-from implementations import create_llm
+from llm_wrapper.implementations import create_llm
 
 llm = create_llm("manual")
 
@@ -269,7 +286,7 @@ that schema:
 
 ```python
 from pydantic import BaseModel
-from implementations import LLMManual
+from llm_wrapper.implementations import LLMManual
 
 class Answer(BaseModel):
     answer: str
@@ -288,8 +305,8 @@ print(response.structured_content)
 created without constructor arguments:
 
 ```python
-from base_llm import BaseLLM
-import implementations  # Registers the built-in providers
+from llm_wrapper.base_llm import BaseLLM
+import llm_wrapper.implementations  # Registers the built-in providers
 
 llm = BaseLLM.from_config({"provider": "manual"})
 ```
@@ -302,7 +319,7 @@ llm = BaseLLM.from_config({"provider": "manual"})
 Every `chat()` call returns a `Message`:
 
 ```python
-from messages import Message, Roles, ToolCall
+from llm_wrapper.messages import Message, Roles, ToolCall
 ```
 
 | Field                | Type                    | Description                                |
@@ -336,7 +353,7 @@ Pass a Pydantic model class as `response_format`:
 
 ```python
 from pydantic import BaseModel
-from implementations import create_llm
+from llm_wrapper.implementations import create_llm
 
 class WeatherAnswer(BaseModel):
     city: str
@@ -407,14 +424,15 @@ The wrapper converts provider-specific tool calls into `ToolCall` objects with a
 
 ## Adding a new provider
 
-Create a subclass of `BaseLLM` and register it with the `provider` class
-keyword:
+Create a module inside `llm_wrapper/src/` (for example
+`llm_wrapper/src/my_provider.py`) with a subclass of `BaseLLM`, using relative
+imports so it stays part of the package:
 
 ```python
 from typing import Any
 
-from base_llm import BaseLLM
-from messages import Message, Roles
+from .base_llm import BaseLLM
+from .messages import Message, Roles
 
 
 class LLMExample(BaseLLM, provider="example"):
@@ -440,9 +458,9 @@ class LLMExample(BaseLLM, provider="example"):
 Then import the module that defines it so it registers:
 
 ```python
-from base_llm import BaseLLM
-import implementations   # Registers the built-in providers
-import my_provider       # Registers "example"
+from llm_wrapper.base_llm import BaseLLM
+import llm_wrapper.implementations  # Registers the built-in providers
+import llm_wrapper.my_provider      # Registers "example"
 
 llm = BaseLLM.create(
     "example",
@@ -471,8 +489,8 @@ to import that manifest.
 Code that only depends on `BaseLLM` works with any implementation:
 
 ```python
-from base_llm import BaseLLM
-from messages import Message
+from llm_wrapper.base_llm import BaseLLM
+from llm_wrapper.messages import Message
 
 
 def ask(llm: BaseLLM, question: str) -> Message:
@@ -490,7 +508,7 @@ A practical way to inspect and debug prompts is to run the same script with the
 manual provider:
 
 ```python
-from implementations import create_llm
+from llm_wrapper.implementations import create_llm
 
 # llm = create_llm("openai", model="...", base_url="...", api_key="...")
 llm = create_llm("manual")
