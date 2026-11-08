@@ -1,6 +1,6 @@
 # llm-wrapper
 
-A small, provider-agnostic wrapper around LLM APIs.
+A small, provider-agnostic wrapper around LLM APIs considered to be used for internal projects.
 
 The project exposes a single interface for chatting with different LLM
 providers, a runtime factory for creating implementations by name, structured
